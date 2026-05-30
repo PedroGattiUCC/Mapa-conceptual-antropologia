@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Conceptual: Cuerpo, Intersubjetividad y Poder</title>
+    <style>
+        /* ================= CSS: ESTILOS Y ANIMACIONES ================= */
+        :root {
+            --bg-dark: #0f172a;
+            --text-light: #f8fafc;
+            --node-bg: #1e293b;
+            --center-color: #a855f7;
+            --color-a: #ef4444; /* Rojo - Minotauro */
+            --color-b: #3b82f6; /* Azul - Kafka/Chaplin */
+            --color-c: #10b981; /* Verde - La Carne/Spinoza */
+            --color-d: #f59e0b; /* Amarillo - Reflexión */
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(to bottom, #000000, transparent);
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 { margin: 0; font-size: 2.2em; text-transform: uppercase; letter-spacing: 2px; }
+        .header p { color: #94a3b8; font-style: italic; margin-top: 5px;}
+
+        /* Contenedor principal del mapa */
+        .map-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 88vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* SVG para dibujar las líneas conectoras dinámicamente */
+        #svg-lines {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        line {
+            stroke: #475569;
+            stroke-width: 2.5;
+            stroke-dasharray: 6;
+            animation: dash 40s linear infinite;
+        }
+
+        @keyframes dash {
+            to { stroke-dashoffset: 1000; }
+        }
+
+        /* Estilo base de los Nodos */
+        .node {
+            position: absolute;
+            background-color: var(--node-bg);
+            border: 2px solid #334155;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            width: 200px;
+            z-index: 2;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            /* BUG FIX: Transición suavizada y separada de la posición inicial */
+            transition: box-shadow 0.3s ease, filter 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* BUG FIX: Evitamos el "jittering" forzando el centrado (translate) junto con el scale, y pausando la flotación */
+        .node:hover {
+            transform: translate(-50%, -50%) scale(1.08) !important;
+            z-index: 5;
+            filter: brightness(1.2);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+            animation-play-state: paused;
+        }
+
+        .node h3 { margin: 0 0 8px 0; font-size: 1.1em; }
+        .node p { font-size: 0.8em; color: #cbd5e1; margin: 0; }
+
+        @keyframes float {
+            0% { transform: translate(-50%, -50%) translateY(0px); }
+            50% { transform: translate(-50%, -50%) translateY(-12px); }
+            100% { transform: translate(-50%, -50%) translateY(0px); }
+        }
+
+        /* DISTRIBUCIÓN RADIAL (11 Nodos) */
+        #node-center { top: 50%; left: 50%; border-color: var(--center-color); width: 260px; box-shadow: 0 0 30px rgba(168, 85, 247, 0.4); animation-delay: 0s;}
+        
+        /* Rama A */
+        #node-a { top: 25%; left: 30%; border-color: var(--color-a); animation-delay: 1s;}
+        #node-a-2 { top: 40%; left: 15%; border-color: var(--color-a); animation-delay: 1.2s;}
+        #node-a-transf { top: 12%; left: 15%; border-color: var(--color-a); border-style: dashed; animation-delay: 1.5s;}
+
+        /* Rama B */
+        #node-b { top: 75%; left: 30%; border-color: var(--color-b); animation-delay: 2s;}
+        #node-b-2 { top: 60%; left: 15%; border-color: var(--color-b); animation-delay: 2.2s;}
+        #node-b-transf { top: 88%; left: 15%; border-color: var(--color-b); border-style: dashed; animation-delay: 2.5s;}
+
+        /* Rama C */
+        #node-c { top: 75%; left: 70%; border-color: var(--color-c); animation-delay: 3s;}
+        #node-c-2 { top: 60%; left: 85%; border-color: var(--color-c); animation-delay: 3.2s;}
+        #node-c-transf { top: 88%; left: 85%; border-color: var(--color-c); border-style: dashed; animation-delay: 3.5s;}
+
+        /* Reflexión */
+        #node-reflexion { top: 25%; left: 70%; border-color: var(--color-d); animation-delay: 4s;}
+
+        /* ================= MODALES Y TRANSICIONES MEJORADAS ================= */
+        .modal {
+            display: flex;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            justify-content: center; align-items: center;
+            /* BUG FIX: Uso de visibility para evitar clicks fantasma y permitir transiciones CSS fluidas */
+            visibility: hidden;
+            opacity: 0; 
+            transition: opacity 0.4s ease, visibility 0.4s;
+        }
+        .modal.active { 
+            visibility: visible; 
+            opacity: 1; 
+        }
+        
+        .modal-content {
+            background-color: var(--node-bg);
+            width: 90%; max-width: 750px;
+            max-height: 85vh; overflow-y: auto;
+            border-radius: 15px; padding: 35px;
+            position: relative;
+            transform: scale(0.7) translateY(40px);
+            opacity: 0;
+            /* Animación Bounce de entrada */
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+        }
+        
+        .modal.active .modal-content { 
+            transform: scale(1) translateY(0); 
+            opacity: 1;
+        }
+
+        .close-btn {
+            position: absolute; top: 15px; right: 25px;
+            font-size: 32px; color: #94a3b8; cursor: pointer;
+            transition: color 0.2s;
+        }
+        .close-btn:hover { color: #fff; }
+
+        .tag {
+            display: inline-block; padding: 4px 10px; border-radius: 6px;
+            font-size: 0.75em; font-weight: bold; margin-bottom: 15px; margin-right: 5px;
+            background-color: rgba(255,255,255,0.1); text-transform: uppercase;
+        }
+
+        .media-container {
+            display: flex; gap: 20px; margin-top: 25px;
+            background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px;
+        }
+        .image-box {
+            flex: 1.2; min-height: 200px;
+            border: 2px dashed #475569; border-radius: 8px;
+            display: flex; justify-content: center; align-items: center;
+            color: #475569; text-align: center; overflow: hidden;
+            background-color: #0f172a;
+        }
+        .image-box img { width: 100%; height: 100%; object-fit: cover; }
+        .audio-box { flex: 0.8; display: flex; flex-direction: column; justify-content: center; }
+        audio { width: 100%; margin-top: 10px; outline: none; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Cuerpo e Intersubjetividad</h1>
+        <p>TP Grupal | Integrantes: Carosanti Lucca (2516093), Gatti Pedro (2519717), Miranda Gregorio (2506821) | Cátedra: C</p>
+        <p style="color: var(--center-color); font-size: 0.95em;">▼ Haz clic en cualquier nodo para abrir la información interactiva ▼</p>
+    </div>
+
+    <div class="map-wrapper" id="map-wrapper">
+        <svg id="svg-lines"></svg>
+
+        <div class="node" id="node-center" onclick="openModal('modal-main')">
+            <h3 style="color: var(--center-color);">Cuerpo e Intersubjetividad</h3>
+            <p>Disciplinamiento vs. Excedencia de la Carne</p>
+        </div>
+
+        <div class="node" id="node-a" onclick="openModal('modal-a')">
+            <h3 style="color: var(--color-a);">A. El Laberinto</h3>
+            <p>La exclusión del Minotauro.</p>
+        </div>
+        <div class="node" id="node-a-2" onclick="openModal('modal-a-2')">
+            <h3 style="color: var(--color-a);">La Democracia y el "Otro"</h3>
+            <p>Identidades hegemónicas y binarias.</p>
+        </div>
+        <div class="node" id="node-a-transf" onclick="openModal('modal-a-transf')">
+            <h3 style="color: var(--color-a);">Muros Subjetivos</h3>
+            <p>Aplicación: RRPP y Filtros.</p>
+        </div>
+
+        <div class="node" id="node-b" onclick="openModal('modal-b')">
+            <h3 style="color: var(--color-b);">B. Poder y Cuerpo</h3>
+            <p>La máquina de Kafka.</p>
+        </div>
+        <div class="node" id="node-b-2" onclick="openModal('modal-b-2')">
+            <h3 style="color: var(--color-b);">Tiempos Modernos</h3>
+            <p>El cuerpo como engranaje.</p>
+        </div>
+        <div class="node" id="node-b-transf" onclick="openModal('modal-b-transf')">
+            <h3 style="color: var(--color-b);">La Máquina Académica</h3>
+            <p>Aplicación: Ingeniería.</p>
+        </div>
+
+        <div class="node" id="node-c" onclick="openModal('modal-c')">
+            <h3 style="color: var(--color-c);">C. La Carne Excediendo</h3>
+            <p>Lo dionisíaco y anárquico.</p>
+        </div>
+        <div class="node" id="node-c-2" onclick="openModal('modal-c-2')">
+            <h3 style="color: var(--color-c);">Potencia Infinita</h3>
+            <p>El cuerpo según Spinoza.</p>
+        </div>
+        <div class="node" id="node-c-transf" onclick="openModal('modal-c-transf')">
+            <h3 style="color: var(--color-c);">El Cuerpo Expresivo</h3>
+            <p>Aplicación: Ocio y Baile.</p>
+        </div>
+
+        <div class="node" id="node-reflexion" onclick="openModal('modal-reflexion')">
+            <h3 style="color: var(--color-d);">Autoevaluación</h3>
+            <p>Reflexión Crítica del Grupo.</p>
+        </div>
+    </div>
+
+
+    <div id="modal-main" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--center-color);">
+            <span class="close-btn" onclick="closeModal('modal-main')">&times;</span>
+            <span class="tag" style="color: var(--center-color);">Eje Central</span>
+            <h2 style="color: var(--center-color); margin-top: 0;">Defensa Oral: Punto de Partida</h2>
+            <p>Este mapa demuestra que el individuo no es un ente aislado, sino que existe en una tensión constante:</p>
+            <ul>
+                <li>Por un lado, las estructuras externas operan buscando disciplinar el <strong>cuerpo vivenciado</strong> (el que siente y sufre) para transformarnos en un <strong>cuerpo orgánico/objeto</strong> (Körper) productivo y dócil.</li>
+                <li>Por otro lado, existe la <strong>Carne Viva</strong> (Gevaert), esa excedencia humana que se resiste a la cosificación técnica a través del arte, el ocio y las relaciones auténticas.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="modal-a" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--color-a);">
+            <span class="close-btn" onclick="closeModal('modal-a')">&times;</span>
+            <span class="tag" style="color: var(--color-a);">Concepto Teórico</span>
+            <h2 style="color: var(--color-a); margin-top: 0;">El Laberinto de Borges</h2>
+            <p>El mito del Minotauro, reinventado en "La casa de Asterión", nos muestra a un monstruo humanizado. No es malvado, sino una criatura inocente que no comprende por qué el mundo le teme. Este ser híbrido es temido y encerrado en laberintos por el simple hecho de ser diferente, sufriendo el desgarro de no poder establecer vínculos reales.</p>
+        </div>
+    </div>
+    
+    <div id="modal-a-2" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--color-a);">
+            <span class="close-btn" onclick="closeModal('modal-a-2')">&times;</span>
+            <span class="tag" style="color: var(--color-a);">Perspectiva Filosófica</span>
+            <h2 style="color: var(--color-a); margin-top: 0;">La Democracia y "El Otro"</h2>
+            <p>Como postula Derrida, "la democracia siempre es del otro". Su salud se mide por su capacidad de mantener una mirada crítica sobre quiénes quedan marginados del sistema. El poder tiende a imponer lógicas de identidad hegemónicas binarias y jerárquicas , rechazando toda hibridación que no encaje en sus moldes preestablecidos.</p>
+        </div>
+    </div>
+
+    <div id="modal-a-transf" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--color-a);">
+            <span class="close-btn" onclick="closeModal('modal-a-transf')">&times;</span>
+            <span class="tag" style="color: var(--color-a);">Transferencia Cotidiana</span>
+            <h2 style="color: var(--color-a); margin-top: 0;">Muros Subjetivos en la Noche</h2>
+            <p>En el ámbito de las relaciones públicas y eventos, los "muros del laberinto" se materializan en el Derecho de Admisión y los filtros VIP. El "Minotauro" de hoy es aquel sujeto que, por carecer de capital estético o económico, queda marginado en la puerta, experimentando la exclusión en espacios diseñados teóricamente para el encuentro colectivo.</p>
+            <div class="media-container">
+                <div class="image-box">
+                    <img src="laberinto.jpg" alt="[Insertar foto de ingreso a evento]" onerror="this.style.display='none'; this.parentNode.innerHTML='[Insertar foto de ingreso aquí]'">
+                </div>
+                <div class="audio-box">
+                    <h4 style="margin-top:0;">Ambiente de Ingreso</h4>
+                    <audio controls loop><source src="susurros.mp3" type="audio/mpeg"></audio>
+                    <p style="font-size: 0.8em; color: #94a3b8;">Audio: Murmullos en la fila.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-b" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--color-b);">
+            <span class="close-btn" onclick="closeModal('modal-b')">&times;</span>
+            <span class="tag" style="color: var(--color-b);">Concepto Teórico</span>
+            <h2 style="color: var(--color-b); margin-top: 0;">Las Colonias Penitenciarias</h2>
+            <p>En Kafka, el poder se ejerce inscribiéndose físicamente sobre la persona a través del dolor. Para Gevaert, esto refleja la anulación del <strong>Cuerpo Humano (Leib)</strong> para ser reducido a un mero <strong>Cuerpo Orgánico (Körper)</strong>: un envase o herramienta intercambiable, destinado estrictamente al rendimiento.</p>
+        </div>
+    </div>
+
+    <div id="modal-b-2" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--color-b);">
+            <span class="close-btn" onclick="closeModal('modal-b-2')">&times;</span>
+            <span class="tag" style="color: var(--color-b);">Perspectiva Cinematográfica</span>
+            <h2 style="color: var(--color-b); margin-top: 0;">Tiempos Modernos (Chaplin)</h2>
+            <p>La fábrica de Chaplin es el panóptico perfecto. En la línea de montaje, el sistema totalizador convierte al obrero en un simple engranaje dócil. El colapso nervioso y físico de Charlot no es un error de la máquina, sino la violenta insurrección de su <strong>cuerpo vivenciado</strong>, que se niega a ser cosificado por completo y expone sus límites humanos reales.</p>
+        </div>
+    </div>
+
+    <div id="modal-b-transf" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--color-b);">
+            <span class="close-btn" onclick="closeModal('modal-b-transf')">&times;</span>
+            <span class="tag" style="color: var(--color-b);">Transferencia Cotidiana</span>
+            <h2 style="color: var(--color-b); margin-top: 0;">La Máquina Académica</h2>
+            <p>En la Ingeniería, la estructura universitaria nos seduce con el éxito profesional exigiéndonos disciplinar la biología: pasar madrugadas frente a pantallas asimilando código. Somos tratados como un periférico más (Cuerpo-Objeto). El estrés y el dolor cervical operan como la insurrección de nuestro cuerpo vivenciado.</p>
+            <div class="media-container">
+                <div class="image-box">
+                    <img src="frustrado.jpg" alt="[Insertar foto de código]" onerror="this.style.display='none'; this.parentNode.innerHTML='[Insertar foto estudiando Ingeniería]'">
+                </div>
+                <div class="audio-box">
+                    <h4 style="margin-top:0;">El Sonido del Rendimiento</h4>
+                    <audio controls loop><source src="teclado.mp3" type="audio/mpeg"></audio>
+                    <p style="font-size: 0.8em; color: #94a3b8;">Audio: Sonido de teclado mecánico.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-c" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--color-c);">
+            <span class="close-btn" onclick="closeModal('modal-c')">&times;</span>
+            <span class="tag" style="color: var(--color-c);">Concepto Teórico</span>
+            <h2 style="color: var(--color-c); margin-top: 0;">La Carne Excediendo al Cuerpo</h2>
+            <p>Frente al cuerpo institucionalizado, la <strong>carne</strong> se presenta como el refugio inmanente ligado a las sensaciones primarias. La carne es indómita, dionisíaca y demoníaca para las instituciones porque siente y goza sin obedecer mandatos económicos o de productividad.</p>
+            <div class="media-container">
+                <div class="image-box">
+                    <img src="meditacion.jpg" alt="[Círculos concéntricos - potencia de la carne]" onerror="this.style.display='none'; this.parentNode.innerHTML='[Insertar imagen de carne excediendo aquí]'">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-c-2" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--color-c);">
+            <span class="close-btn" onclick="closeModal('modal-c-2')">&times;</span>
+            <span class="tag" style="color: var(--color-c);">Perspectiva Filosófica</span>
+            <h2 style="color: var(--color-c); margin-top: 0;">La Potencia Infinita (Spinoza)</h2>
+            <p>Occidente construyó un relato donde el alma es pura y el cuerpo una cárcel que debe ser reprimida (Platón). Para desarmar esto, invocamos a Spinoza: <em>"Nadie sabe lo que puede un cuerpo"</em>. La verdadera revolución existencial consiste en liberar esa potencia infinita de los lazos farmaco-pornográficos y disciplinarios.</p>
+        </div>
+    </div>
+
+    <div id="modal-c-transf" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--color-c);">
+            <span class="close-btn" onclick="closeModal('modal-c-transf')">&times;</span>
+            <span class="tag" style="color: var(--color-c);">Transferencia Cotidiana</span>
+            <h2 style="color: var(--color-c); margin-top: 0;">El Ocio, el Baile y la Música</h2>
+            <p>La "venganza de la carne" ocurre en la pista de baile. Al escuchar ritmos urbanos, abandonamos el lenguaje conceptual (como Charlot perdiendo sus puños de camisa). El cuerpo recupera su carácter sacramental y expresivo, celebrando la libertad intersubjetiva sin métricas de rendimiento.</p>
+            <div class="media-container">
+                <div class="image-box">
+                    <img src="fiesta.jpg" alt="[Insertar foto bailando]" onerror="this.style.display='none'; this.parentNode.innerHTML='[Insertar foto tuya/del grupo en un evento]'">
+                </div>
+                <div class="audio-box">
+                    <h4 style="margin-top:0;">Dionisíaco en Acción</h4>
+                    <audio controls loop><source src="fiesta.mp3" type="audio/mpeg"></audio>
+                    <p style="font-size: 0.8em; color: #94a3b8;">Audio: Música de evento festivo.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-reflexion" class="modal">
+        <div class="modal-content" style="border-top: 5px solid var(--color-d);">
+            <span class="close-btn" onclick="closeModal('modal-reflexion')">&times;</span>
+            <span class="tag" style="color: var(--color-d);">Criterio de Evaluación 4</span>
+            <h2 style="color: var(--color-d); margin-top: 0;">Reflexión Crítica y Autoevaluación</h2>
+            <p><strong>El Proceso de Aprendizaje:</strong> Construir este mapa nos exigió observarnos como <strong>cuerpos intervenidos</strong>. Fue un desafío darnos cuenta de cómo nosotros mismos participamos de nuestra propia "colonización", priorizando el éxito en la gestión y los estudios por encima del cansancio de nuestra carne.</p>
+            <p><strong>Conclusión Grupal:</strong> La intersubjetividad democrática peligra cuando nos tratamos como objetos rentables. Reconocemos que en nuestros espacios de arte, música y ocio poseemos la potencia (Spinoza) para resistir, usando nuestro cuerpo vivenciado para forjar lazos reales que rompan con los laberintos de la exclusión.</p>
+        </div>
+    </div>
+
+    <script>
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            const audios = document.getElementById(id).querySelectorAll('audio');
+            audios.forEach(a => a.pause());
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+                const audios = event.target.querySelectorAll('audio');
+                audios.forEach(a => a.pause());
+            }
+        }
+
+        function drawLines() {
+            const svg = document.getElementById('svg-lines');
+            svg.innerHTML = ''; 
+
+            const nodesToConnect = ['node-a', 'node-b', 'node-c', 'node-reflexion'];
+            const subConnections = [
+                ['node-a', 'node-a-transf'],
+                ['node-a', 'node-a-2'],
+                ['node-b', 'node-b-transf'],
+                ['node-b', 'node-b-2'],
+                ['node-c', 'node-c-transf'],
+                ['node-c', 'node-c-2']
+            ];
+
+            function createLine(id1, id2, isSubConnection = false) {
+                const el1 = document.getElementById(id1);
+                const el2 = document.getElementById(id2);
+                if(!el1 || !el2) return;
+
+                const rect1 = el1.getBoundingClientRect();
+                const rect2 = el2.getBoundingClientRect();
+                const wrapperRect = document.getElementById('map-wrapper').getBoundingClientRect();
+
+                const x1 = rect1.left + rect1.width/2 - wrapperRect.left;
+                const y1 = rect1.top + rect1.height/2 - wrapperRect.top;
+                const x2 = rect2.left + rect2.width/2 - wrapperRect.left;
+                const y2 = rect2.top + rect2.height/2 - wrapperRect.top;
+
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                
+                if(isSubConnection) {
+                    const parentColor = getComputedStyle(el1).borderColor;
+                    line.style.stroke = parentColor;
+                }
+                svg.appendChild(line);
+            }
+
+            nodesToConnect.forEach(nodeId => createLine('node-center', nodeId));
+            subConnections.forEach(pair => createLine(pair[0], pair[1], true));
+        }
+
+        function animateLines() {
+            drawLines();
+            requestAnimationFrame(animateLines);
+        }
+        
+        window.onload = animateLines;
+        window.onresize = drawLines;
+    </script>
+</body>
+</html>
