@@ -184,6 +184,115 @@
         .image-box img { width: 100%; height: 100%; object-fit: cover; }
         .audio-box { flex: 0.8; display: flex; flex-direction: column; justify-content: center; }
         audio { width: 100%; margin-top: 10px; outline: none; }
+
+        /* ================= RESPONSIVE DESIGN PARA MÓVILES ================= */
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.6em; letter-spacing: 1px; }
+            .header p { font-size: 0.85em; }
+            
+            .map-wrapper {
+                height: 92vh;
+            }
+
+            .node {
+                width: 140px;
+                padding: 10px;
+                border-radius: 8px;
+                font-size: 0.9em;
+            }
+
+            .node h3 { font-size: 0.9em; margin-bottom: 5px; }
+            .node p { font-size: 0.7em; }
+
+            #node-center { 
+                width: 160px;
+                font-size: 0.85em;
+            }
+
+            /* Reposicionamiento para móvil - Layout más comprimido */
+            #node-a { top: 15%; left: 25%; }
+            #node-a-2 { top: 28%; left: 10%; }
+            #node-a-transf { top: 5%; left: 10%; }
+
+            #node-b { top: 75%; left: 25%; }
+            #node-b-2 { top: 62%; left: 10%; }
+            #node-b-transf { top: 88%; left: 10%; }
+
+            #node-c { top: 75%; left: 75%; }
+            #node-c-2 { top: 62%; left: 90%; }
+            #node-c-transf { top: 88%; left: 90%; }
+
+            #node-reflexion { top: 15%; left: 75%; }
+
+            .modal-content {
+                width: 95%;
+                max-width: 100%;
+                padding: 20px;
+                border-radius: 12px;
+                max-height: 90vh;
+            }
+
+            .close-btn {
+                font-size: 24px;
+                top: 10px;
+                right: 15px;
+            }
+
+            .media-container {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+
+            .image-box {
+                flex: 1;
+                min-height: 150px;
+            }
+
+            .audio-box {
+                flex: 1;
+            }
+
+            .tag {
+                font-size: 0.65em;
+                padding: 3px 8px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 { font-size: 1.3em; }
+            .header p { font-size: 0.75em; margin-top: 3px; }
+
+            .node {
+                width: 110px;
+                padding: 8px;
+                border-radius: 6px;
+            }
+
+            .node h3 { font-size: 0.8em; }
+            .node p { font-size: 0.65em; }
+
+            #node-center {
+                width: 130px;
+                font-size: 0.75em;
+            }
+
+            .modal-content {
+                padding: 15px;
+            }
+
+            .close-btn {
+                font-size: 20px;
+            }
+
+            .media-container {
+                padding: 10px;
+            }
+
+            .image-box {
+                min-height: 120px;
+            }
+        }
     </style>
 </head>
 <body>
